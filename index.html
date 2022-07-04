@@ -180,11 +180,13 @@
         };
       }
 
-      document.addEventListener('DOMContentLoaded', function() {
+      const init = () => {
 
         const canvas = document.getElementById('canvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        const ratio = window.devicePixelRatio;
+        canvas.width = window.innerWidth * ratio;
+        canvas.height = window.innerHeight * ratio;
+        console.log(canvas.width + "x" + canvas.height, canvas.width * canvas.height + "px")
 
         const gl = canvas.getContext('webgl');
 
@@ -275,16 +277,17 @@
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
           gl.flush();
 
-          let tmp = prevFrameBufferObj;
-          prevFrameBufferObj = nextFrameBufferObj;
-          nextFrameBufferObj = tmp;
+          [prevFrameBufferObj, nextFrameBufferObj] = [nextFrameBufferObj, prevFrameBufferObj];
 
           requestAnimationFrame(render)
         };
 
         requestAnimationFrame(render);
 
-      });
+      };
+      document.addEventListener('DOMContentLoaded', init);
+      window.addEventListener('resize', init);
+      canvas.onmousedown = () => canvas.requestFullscreen();
     </script>
 
   </body>
