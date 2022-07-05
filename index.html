@@ -78,7 +78,7 @@
       }
     </script>
 
-    <script>
+    <script type="module">
 
       // creates a shader
       // @param [WebGLRenderingContext] gl
@@ -179,14 +179,27 @@
           texture: texture
         };
       }
+      function deleteFrameBuffer(gl, obj) {
+        gl.deleteFramebuffer(obj.frameBuffer);
+        gl.deleteTexture(obj.texture);
+      }
+      function remakeFrameBuffer(gl, obj, width, height) {
+        if (obj) {
+          deleteFrameBuffer(gl, obj);
+        }
+        return createFrameBuffer(gl, width, height);
+      }
 
-      const init = () => {
+      document.addEventListener('DOMContentLoaded', () => {
 
         const canvas = document.getElementById('canvas');
-        const ratio = window.devicePixelRatio;
-        canvas.width = window.innerWidth * ratio;
-        canvas.height = window.innerHeight * ratio;
-        console.log(canvas.width + "x" + canvas.height, canvas.width * canvas.height + "px")
+        const resizeCanvas = () => {
+          const ratio = window.devicePixelRatio;
+          canvas.width = window.innerWidth * ratio;
+          canvas.height = window.innerHeight * ratio;
+          console.log(canvas.width + "x" + canvas.height, canvas.width * canvas.height + "px")
+        };
+        resizeCanvas();
 
         const gl = canvas.getContext('webgl');
 
@@ -207,7 +220,7 @@
         ];
         const positionBuffer = createArrayBuffer(gl, position);
 
-        const texCoord =[
+        const texCoord = [
           0.0, 1.0,
           0.0, 0.0,
           1.0, 1.0,
@@ -215,26 +228,42 @@
         ];
         const texCoordBuffer = createArrayBuffer(gl, texCoord);
 
-        let prevFrameBufferObj = createFrameBuffer(gl, canvas.width, canvas.height);
-        let nextFrameBufferObj = createFrameBuffer(gl, canvas.width, canvas.height);
+        let prevFrameBufferObj = null;
+        let nextFrameBufferObj = null;
+        const makeFrameBuffers = () => {
+          prevFrameBufferObj = remakeFrameBuffer(gl, prevFrameBufferObj, canvas.width, canvas.height);
+          nextFrameBufferObj = remakeFrameBuffer(gl, nextFrameBufferObj, canvas.width, canvas.height);
+        };
+        makeFrameBuffers();
+        
+        const initField = () => {
+          gl.useProgram(initializeProgram);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, prevFrameBufferObj.frameBuffer);
+          gl.viewport(0, 0, canvas.width, canvas.height);
+          gl.clearColor(0.0, 0.0, 0.0, 1.0);
+          setAttributes(gl, {
+            aPosition: {
+              location: gl.getAttribLocation(initializeProgram, 'aPosition'),
+              size: 3,
+              buffer: positionBuffer
+            }
+          });
+          gl.uniform2fv(gl.getUniformLocation(initializeProgram, 'uOffset'), [Math.random() * canvas.width, Math.random() * canvas.height]);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          gl.flush();
+        };
+        initField();
 
-        gl.useProgram(initializeProgram);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, prevFrameBufferObj.frameBuffer);
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        setAttributes(gl, {
-          aPosition: {
-            location: gl.getAttribLocation(initializeProgram, 'aPosition'),
-            size: 3,
-            buffer: positionBuffer
-          }
-        });
-        gl.uniform2fv(gl.getUniformLocation(initializeProgram, 'uOffset'), [Math.random() * canvas.width, Math.random() * canvas.height]);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        gl.flush();
-
+        let requestResize = false;
         const render = () => {
+          if (requestResize) {
+            requestResize = false;
+            resizeCanvas();
+            makeFrameBuffers();
+            initField();
+          }
+
           gl.useProgram(updateProgram);
           gl.bindFramebuffer(gl.FRAMEBUFFER, nextFrameBufferObj.frameBuffer);
           gl.viewport(0, 0, canvas.width, canvas.height);
@@ -284,10 +313,12 @@
 
         requestAnimationFrame(render);
 
-      };
-      document.addEventListener('DOMContentLoaded', init);
-      window.addEventListener('resize', init);
-      canvas.onmousedown = () => canvas.requestFullscreen();
+        window.addEventListener('resize', () => requestResize = true);
+        canvas.onmousedown = () => {
+          initField();
+          canvas.requestFullscreen();
+        };
+      });
     </script>
 
   </body>
