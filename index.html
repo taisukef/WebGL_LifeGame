@@ -197,6 +197,8 @@
           const ratio = window.devicePixelRatio;
           canvas.width = window.innerWidth * ratio;
           canvas.height = window.innerHeight * ratio;
+          canvas.style.width = window.innerWidth + "px";
+          canvas.style.height = window.innerHeight + "px";
           console.log(canvas.width + "x" + canvas.height, canvas.width * canvas.height + "px")
         };
         resizeCanvas();
