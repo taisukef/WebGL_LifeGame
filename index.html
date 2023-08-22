@@ -12,11 +12,12 @@
   <body>
     <canvas id="canvas"></canvas>
 
-    <script id="vertex-shader" type="x-shader/x-vertex">
-      attribute vec3 aPosition;
-      attribute vec2 aTextureCoordinate;
+    <script id="vertex-shader" type="x-shader/x-vertex">#version 300 es
 
-      varying vec2 vTextureCoordinate;
+      in vec3 aPosition;
+      in vec2 aTextureCoordinate;
+
+      out vec2 vTextureCoordinate;
 
       void main() {
         vTextureCoordinate = aTextureCoordinate;
@@ -24,57 +25,58 @@
       }
     </script>
 
-    <script id="initialize-shader" type="x-shader/x-fragment">
+    <script id="initialize-shader" type="x-shader/x-fragment">#version 300 es
       precision mediump float;
 
       uniform vec2 uOffset;
 
-      varying vec2 vTextureCoordinate;
+      out vec4 vColor;
 
       float random(vec2 st) {
         return fract(sin(dot(st, vec2(12.9898,78.233))) * 43758.5453123);
       }
 
       void main() {
-        gl_FragColor = random((gl_FragCoord.xy + uOffset) * 0.001) < 0.5 ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(0.0, 0.0, 0.0, 1.0);
+        vColor = random((gl_FragCoord.xy + uOffset) * 0.001) < 0.5 ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(0.0, 0.0, 0.0, 1.0);
       }
     </script>
 
-    <script id="update-shader" type="x-shader/x-fragment">
+    <script id="update-shader" type="x-shader/x-fragment">#version 300 es
       precision mediump float;
 
       uniform sampler2D aTexture;
       uniform vec2 uResolution;
 
-      varying vec2 vTextureCoordinate;
+      in vec2 vTextureCoordinate;
+      out vec4 vColor;
 
       void main() {
         vec2 scale = 1.0 / uResolution;
-        bool isAlive = texture2D(aTexture, gl_FragCoord.xy * scale).g < 0.5 ? false : true;
+        bool isAlive = texture(aTexture, gl_FragCoord.xy * scale).g < 0.5 ? false : true;
         int sum = 0;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2(-1.0,  1.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2( 0.0,  1.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2( 1.0,  1.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2(-1.0,  0.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2( 1.0,  0.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2(-1.0, -1.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2( 0.0, -1.0)) * scale).g < 0.5 ? 0 : 1;
-        sum += texture2D(aTexture, (gl_FragCoord.xy + vec2( 1.0, -1.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2(-1.0,  1.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2( 0.0,  1.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2( 1.0,  1.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2(-1.0,  0.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2( 1.0,  0.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2(-1.0, -1.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2( 0.0, -1.0)) * scale).g < 0.5 ? 0 : 1;
+        sum += texture(aTexture, (gl_FragCoord.xy + vec2( 1.0, -1.0)) * scale).g < 0.5 ? 0 : 1;
 
-        gl_FragColor = ((isAlive && (sum == 2 || sum == 3)) || (!isAlive && sum == 3)) ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(0.0, 0.0, 0.0, 1.0);
-
+        vColor = ((isAlive && (sum == 2 || sum == 3)) || (!isAlive && sum == 3)) ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(0.0, 0.0, 0.0, 1.0);
       }
     </script>
 
-    <script id="render-shader" type="x-shader/x-fragment">
+    <script id="render-shader" type="x-shader/x-fragment">#version 300 es
       precision mediump float;
 
       uniform sampler2D aTexture;
 
-      varying vec2 vTextureCoordinate;
+      in vec2 vTextureCoordinate;
+      out vec4 vColor;
 
       void main() {
-        gl_FragColor = texture2D(aTexture, vTextureCoordinate);
+        vColor = texture(aTexture, vTextureCoordinate);
       }
     </script>
 
@@ -120,7 +122,7 @@
 
         gl.linkProgram(program);
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-          throw new Error('Can not link program(' + gl.getProgramParameter(program) + ')');
+          throw new Error('Can not link program(' + gl.getProgramParameter(program, gl.LINK_STATUS) + ')');
         }
 
         return program;
@@ -203,7 +205,7 @@
         };
         resizeCanvas();
 
-        const gl = canvas.getContext('webgl');
+        const gl = canvas.getContext('webgl2');
 
         const vertexShader = createShader(gl, 'vertex-shader');
         const initializeShader = createShader(gl, 'initialize-shader');
